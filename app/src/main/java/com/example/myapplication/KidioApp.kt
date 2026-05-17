@@ -1,8 +1,10 @@
 package com.example.myapplication
 
+import android.content.Context
 import android.speech.tts.TextToSpeech
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -71,6 +73,33 @@ data class KidioItem(
     val description: String = ""
 )
 
+/** Giọng nói: say = bé bấm loa; prompt = lời dẫn/động viên tự động (có thể tắt) */
+data class KidioSpeech(
+    val say: (String) -> Unit,
+    val prompt: (String) -> Unit
+)
+
+private val numberEnglishWords = listOf(
+    "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+    "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen", "Twenty"
+)
+
+private val numberVietnameseWords = listOf(
+    "Một", "Hai", "Ba", "Bốn", "Năm", "Sáu", "Bảy", "Tám", "Chín", "Mười",
+    "Mười một", "Mười hai", "Mười ba", "Mười bốn", "Mười lăm", "Mười sáu",
+    "Mười bảy", "Mười tám", "Mười chín", "Hai mươi"
+)
+
+fun numberLearnItems(): List<KidioItem> =
+    (1..20).mapIndexed { index, digit ->
+        KidioItem(
+            name = numberEnglishWords[index],
+            emoji = digit.toString(),
+            description = numberVietnameseWords[index]
+        )
+    }
+
 val categories = listOf(
     Category(
         id = "animals",
@@ -100,7 +129,7 @@ val categories = listOf(
         name = "Numbers",
         icon = Icons.Default.Numbers,
         color = Color(0xFF4CAF50),
-        items = (1..20).map { KidioItem(it.toString(), it.toString()) }
+        items = numberLearnItems()
     ),
     Category(
         id = "colors",
@@ -175,44 +204,149 @@ val categories = listOf(
             KidioItem("Hands", "✋"),
             KidioItem("Feet", "👣")
         )
+    ),
+    Category(
+        id = "months",
+        name = "Months",
+        icon = Icons.Default.CalendarMonth,
+        color = Color(0xFF00BCD4),
+        items = listOf(
+            KidioItem("January", "❄️", "Tháng Một"),
+            KidioItem("February", "💝", "Tháng Hai"),
+            KidioItem("March", "🌸", "Tháng Ba"),
+            KidioItem("April", "🌧️", "Tháng Tư"),
+            KidioItem("May", "🌻", "Tháng Năm"),
+            KidioItem("June", "☀️", "Tháng Sáu"),
+            KidioItem("July", "🏖️", "Tháng Bảy"),
+            KidioItem("August", "🌊", "Tháng Tám"),
+            KidioItem("September", "📚", "Tháng Chín"),
+            KidioItem("October", "🎃", "Tháng Mười"),
+            KidioItem("November", "🍂", "Tháng Mười Một"),
+            KidioItem("December", "🎄", "Tháng Mười Hai")
+        )
+    ),
+    Category(
+        id = "weekdays",
+        name = "Week Days",
+        icon = Icons.Default.Event,
+        color = Color(0xFF3F51B5),
+        items = listOf(
+            KidioItem("Monday", "1️⃣", "Thứ Hai"),
+            KidioItem("Tuesday", "2️⃣", "Thứ Ba"),
+            KidioItem("Wednesday", "3️⃣", "Thứ Tư"),
+            KidioItem("Thursday", "4️⃣", "Thứ Năm"),
+            KidioItem("Friday", "5️⃣", "Thứ Sáu"),
+            KidioItem("Saturday", "6️⃣", "Thứ Bảy"),
+            KidioItem("Sunday", "7️⃣", "Chủ Nhật")
+        )
+    ),
+    Category(
+        id = "jobs",
+        name = "Jobs",
+        icon = Icons.Default.Work,
+        color = Color(0xFF8BC34A),
+        items = listOf(
+            KidioItem("Doctor", "👨‍⚕️", "Bác sĩ"),
+            KidioItem("Teacher", "👩‍🏫", "Giáo viên"),
+            KidioItem("Chef", "👨‍🍳", "Đầu bếp"),
+            KidioItem("Police", "👮", "Cảnh sát"),
+            KidioItem("Firefighter", "👨‍🚒", "Lính cứu hỏa"),
+            KidioItem("Farmer", "👨‍🌾", "Nông dân"),
+            KidioItem("Pilot", "👨‍✈️", "Phi công"),
+            KidioItem("Artist", "👩‍🎨", "Họa sĩ"),
+            KidioItem("Singer", "🎤", "Ca sĩ"),
+            KidioItem("Builder", "👷", "Thợ xây")
+        )
     )
 )
+
+/** Toàn bộ từ vựng từ các chủ đề Let's Learn */
+fun allLearnVocabulary(): List<KidioItem> =
+    categories.flatMap { it.items }.distinctBy { it.name }
+
+/** Chỉ dùng chữ cái (vd: Ten, không phải 1+0) */
+fun KidioItem.spellingWord(): String =
+    name.uppercase().filter { it.isLetter() }
+
+fun KidioItem.isDigitVisual(): Boolean = emoji.all { it.isDigit() }
+
+fun KidioItem.displayHint(): String =
+    if (description.isNotBlank()) description else name
+
+fun KidioItem.speakLabel(): String = name
+
+/** Từ đủ dài để ghép chữ (2–9 ký tự), bỏ chữ cái đơn lẻ */
+fun randomBuildableItem(exclude: KidioItem? = null): KidioItem {
+    val pool = allLearnVocabulary().filter { item ->
+        val len = item.spellingWord().length
+        len in 2..9 && item.name != exclude?.name
+    }
+    return pool.randomOrNull() ?: allLearnVocabulary().random()
+}
+
+fun randomLearnItem(exclude: KidioItem? = null): KidioItem {
+    val pool = allLearnVocabulary().filter { it.name != exclude?.name }
+    return pool.random()
+}
+
+fun listenChooseOptions(correct: KidioItem): List<KidioItem> {
+    val others = allLearnVocabulary()
+        .filter { it.name != correct.name }
+        .shuffled()
+        .take(3)
+    return (others + correct).shuffled()
+}
 
 @Composable
 fun KidioApp() {
     val context = LocalContext.current
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
     var ttsReady by remember { mutableStateOf(false) }
+    val prefs = remember { context.getSharedPreferences("kidio_prefs", Context.MODE_PRIVATE) }
+    var promptVoiceEnabled by remember {
+        mutableStateOf(prefs.getBoolean("prompt_voice_enabled", true))
+    }
+
+    fun setPromptVoiceEnabled(enabled: Boolean) {
+        promptVoiceEnabled = enabled
+        prefs.edit().putBoolean("prompt_voice_enabled", enabled).apply()
+    }
 
     DisposableEffect(context) {
-        val ttsInstance = TextToSpeech(context) { status ->
+        lateinit var ttsInstance: TextToSpeech
+        ttsInstance = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                // TTS setup
+                ttsInstance.language = Locale.US
+                ttsReady = true
             }
         }
         tts = ttsInstance
-        ttsInstance.setLanguage(Locale("vi", "VN"))
-        ttsReady = true
         onDispose {
             ttsInstance.stop()
             ttsInstance.shutdown()
+            ttsReady = false
         }
     }
 
-    val speak = { text: String ->
+    val sayRaw: (String) -> Unit = { text ->
         if (ttsReady) {
-            // Tự động chọn ngôn ngữ: Nếu chứa ký tự đặc biệt tiếng Việt hoặc là câu thoại dài -> Tiếng Việt. 
-            // Nếu là tên các mục học tập đơn lẻ (thường là tiếng Anh) -> Tiếng Anh.
-            val isEnglish = text.all { it in 'a'..'z' || it in 'A'..'Z' || it == ' ' } && text.length < 15
-            
-            if (isEnglish) {
-                tts?.setLanguage(Locale.US)
-            } else {
+            // Phát hiện ngôn ngữ: nếu là tiếng Việt (chứa ký tự Việt), dùng Tiếng Việt; còn lại dùng Tiếng Anh
+            val isVietnamese = text.any { it in 'à'..'ỿ' || it == 'đ' || it == 'Đ' }
+            if (isVietnamese) {
                 tts?.setLanguage(Locale("vi", "VN"))
+            } else {
+                tts?.setLanguage(Locale.US)
             }
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
         }
         Unit
+    }
+
+    val speech = remember(promptVoiceEnabled, ttsReady) {
+        KidioSpeech(
+            say = sayRaw,
+            prompt = { text -> if (promptVoiceEnabled) sayRaw(text) }
+        )
     }
 
     val navController = rememberNavController()
@@ -224,16 +358,25 @@ fun KidioApp() {
     ) {
         composable("home") {
             HomeScreen(
+                promptVoiceEnabled = promptVoiceEnabled,
+                onPromptVoiceChange = { setPromptVoiceEnabled(it) },
                 onCategoryClick = { category ->
-                    speak(category.name)
+                    speech.say(category.name)
                     navController.navigate("detail/${category.id}")
                 },
                 onGameClick = { gameRoute ->
-                    speak("Chúng mình cùng chơi nhé!")
+                    val msg = when (gameRoute) {
+                        "letter_build" -> "Cùng ghép chữ tạo từ nào!"
+                        "listen_choose" -> "Nghe và chọn đúng từ nhé!"
+                        "memory_game" -> "Chơi trò tìm cặp nhé!"
+                        "balloon_pop" -> "Bắt bóng bay nào!"
+                        else -> "Chúng mình cùng chơi nhé!"
+                    }
+                    speech.prompt(msg)
                     navController.navigate(gameRoute)
                 },
                 onWritingClick = {
-                    speak("Bé hãy tập viết chữ và số nào!")
+                    speech.prompt("Bé hãy tập viết chữ và số nào!")
                     navController.navigate("writing")
                 }
             )
@@ -248,8 +391,12 @@ fun KidioApp() {
                 CategoryDetailScreen(
                     category = category,
                     onBackClick = { navController.popBackStack() },
-                    onItemClick = { item -> speak(item.name) },
-                    onQuizClick = { navController.navigate("quiz/${category.id}") }
+                    onItemClick = { item ->
+                        val text = if (item.description.isNotBlank()) item.description else item.name
+                        speech.say(text)
+                    },
+                    onQuizClick = { navController.navigate("quiz/${category.id}") },
+                    speech = speech
                 )
             }
         }
@@ -263,18 +410,24 @@ fun KidioApp() {
                 QuizScreen(
                     category = category,
                     onBackClick = { navController.popBackStack() },
-                    speak = speak
+                    speech = speech
                 )
             }
         }
         composable("memory_game") {
-            MemoryGameScreen(onBackClick = { navController.popBackStack() }, speak = speak)
+            MemoryGameScreen(onBackClick = { navController.popBackStack() }, speech = speech)
         }
         composable("balloon_pop") {
-            BalloonPopScreen(onBackClick = { navController.popBackStack() }, speak = speak)
+            BalloonPopScreen(onBackClick = { navController.popBackStack() }, speech = speech)
         }
         composable("writing") {
-            WritingScreen(onBackClick = { navController.popBackStack() }, speak = speak)
+            WritingScreen(onBackClick = { navController.popBackStack() }, speech = speech)
+        }
+        composable("letter_build") {
+            LetterBuildScreen(onBackClick = { navController.popBackStack() }, speech = speech)
+        }
+        composable("listen_choose") {
+            ListenChooseScreen(onBackClick = { navController.popBackStack() }, speech = speech)
         }
     }
 }
@@ -282,6 +435,8 @@ fun KidioApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    promptVoiceEnabled: Boolean,
+    onPromptVoiceChange: (Boolean) -> Unit,
     onCategoryClick: (Category) -> Unit,
     onGameClick: (String) -> Unit,
     onWritingClick: () -> Unit,
@@ -297,6 +452,27 @@ fun HomeScreen(
                         fontSize = 28.sp,
                         letterSpacing = 1.sp
                     )
+                },
+                actions = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (promptVoiceEnabled) {
+                                Icons.AutoMirrored.Filled.VolumeUp
+                            } else {
+                                Icons.Default.VolumeOff
+                            },
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Switch(
+                            checked = promptVoiceEnabled,
+                            onCheckedChange = onPromptVoiceChange
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -328,6 +504,15 @@ fun HomeScreen(
                 }
             }
 
+            if (!promptVoiceEnabled) {
+                Text(
+                    text = "🔇 Đã tắt giọng hướng dẫn — bấm loa trên thẻ để nghe từ",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF795548),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
@@ -340,21 +525,41 @@ fun HomeScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 GameCard(
-                    name = "Memory Match",
+                    name = "Memory",
                     icon = Icons.Default.Extension,
                     color = Color(0xFF673AB7),
                     modifier = Modifier.weight(1f),
                     onClick = { onGameClick("memory_game") }
                 )
                 GameCard(
-                    name = "Balloon Pop",
+                    name = "Balloons",
                     icon = Icons.Default.Celebration,
                     color = Color(0xFFFF4081),
                     modifier = Modifier.weight(1f),
                     onClick = { onGameClick("balloon_pop") }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                GameCard(
+                    name = "Ghép chữ",
+                    icon = Icons.Default.TextFields,
+                    color = Color(0xFF009688),
+                    modifier = Modifier.weight(1f),
+                    onClick = { onGameClick("letter_build") }
+                )
+                GameCard(
+                    name = "Nghe chọn",
+                    icon = Icons.Default.Hearing,
+                    color = Color(0xFF5C6BC0),
+                    modifier = Modifier.weight(1f),
+                    onClick = { onGameClick("listen_choose") }
                 )
             }
 
@@ -385,7 +590,7 @@ fun HomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
+fun WritingScreen(onBackClick: () -> Unit, speech: KidioSpeech) {
     val characters = remember { ('A'..'Z').map { it.toString() } + (0..9).map { it.toString() } }
     var currentIndex by remember { mutableIntStateOf(0) }
     val paths = remember { mutableStateListOf<Path>() }
@@ -409,7 +614,7 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                         paths.clear() 
                         showScore = false
                     }) { Icon(Icons.Default.Delete, "Xóa", tint = Color.Red) }
-                    IconButton(onClick = { speak(characters[currentIndex]) }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, null) }
+                    IconButton(onClick = { speech.say(characters[currentIndex]) }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, null) }
                 }
             )
         }
@@ -418,7 +623,7 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(24.dp)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
                     .fillMaxWidth()
                     .background(Color(0xFFF5F5F5), RoundedCornerShape(16.dp))
                     .onSizeChanged { canvasSize = it }
@@ -430,7 +635,6 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                             },
                             onDrag = { change, _ ->
                                 currentPath?.lineTo(change.position.x, change.position.y)
-                                // Trigger recomposition
                                 val p = currentPath
                                 currentPath = null
                                 currentPath = p
@@ -447,7 +651,8 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                     text = characters[currentIndex],
                     fontSize = 250.sp,
                     fontWeight = FontWeight.Thin,
-                    color = Color.LightGray.copy(alpha = 0.3f)
+                    color = Color.LightGray.copy(alpha = 0.3f),
+                    modifier = Modifier.align(Alignment.Center)
                 )
 
                 Canvas(modifier = Modifier.fillMaxSize()) {
@@ -458,8 +663,7 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                         drawPath(path, color = Color(0xFF2196F3), style = Stroke(width = 20f, cap = StrokeCap.Round))
                     }
                 }
-                
-                // Reward Sticker Overlay
+
                 androidx.compose.animation.AnimatedVisibility(
                     visible = showScore && score >= 8.0f,
                     enter = fadeIn() + scaleIn(),
@@ -468,16 +672,31 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                 ) {
                     Text(rewardEmoji, fontSize = 80.sp)
                 }
-            }
 
-            // Accuracy Feedback
-            androidx.compose.animation.AnimatedVisibility(visible = showScore) {
-                Text(
-                    text = String.format("%.1f/10 Điểm", score),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (score >= 8.0f) Color(0xFF4CAF50) else Color(0xFFFF9800)
-                )
+                // Điểm hiển thị chồng lên canvas — không đẩy chữ mẫu lên
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 12.dp)
+                        .height(56.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.animation.AnimatedVisibility(visible = showScore) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (score >= 8.0f) Color(0xFF4CAF50) else Color(0xFFFF9800),
+                            shadowElevation = 6.dp
+                        ) {
+                            Text(
+                                text = String.format("%.1f / 10 điểm", score),
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
             }
 
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -496,13 +715,13 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                             
                             // Giọng nói phản hồi dựa trên điểm số
                             when {
-                                score <= 1.5f -> speak("Bé hãy nhìn kỹ chữ mẫu và viết lại cho đúng nhé!")
-                                score < 5.0f -> speak(String.format("Con viết chưa đúng lắm, điểm của con là %.1f. Thử lại nhé!", score))
-                                score < 8.0f -> speak(String.format("Con gần đúng rồi, điểm của con là %.1f. Cố gắng lên nào!", score))
-                                else -> speak(String.format("Tuyệt vời! Con viết đẹp lắm, được %.1f điểm luôn này!", score))
+                                score <= 1.5f -> speech.prompt("Bé hãy nhìn kỹ chữ mẫu và viết lại cho đúng nhé!")
+                                score < 5.0f -> speech.prompt(String.format("Con viết chưa đúng lắm, điểm của con là %.1f. Thử lại nhé!", score))
+                                score < 8.0f -> speech.prompt(String.format("Con gần đúng rồi, điểm của con là %.1f. Cố gắng lên nào!", score))
+                                else -> speech.prompt(String.format("Tuyệt vời! Con viết đẹp lắm, được %.1f điểm luôn này!", score))
                             }
                         } else {
-                            speak("Con hãy viết gì đó nhé")
+                            speech.prompt("Con hãy viết gì đó nhé")
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
@@ -519,7 +738,7 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                     if (currentIndex > 0) currentIndex--
                     paths.clear()
                     showScore = false
-                    speak(characters[currentIndex])
+                    speech.say(characters[currentIndex])
                 }) { Text("Trước") }
                 
                 Text("${currentIndex + 1} / ${characters.size}", Modifier.padding(horizontal = 24.dp), fontWeight = FontWeight.Bold)
@@ -528,7 +747,7 @@ fun WritingScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                     if (currentIndex < characters.size - 1) currentIndex++
                     paths.clear()
                     showScore = false
-                    speak(characters[currentIndex])
+                    speech.say(characters[currentIndex])
                 }) { Text("Tiếp") }
             }
         }
@@ -706,8 +925,11 @@ fun CategoryDetailScreen(
     category: Category,
     onBackClick: () -> Unit,
     onItemClick: (KidioItem) -> Unit,
-    onQuizClick: () -> Unit
+    onQuizClick: () -> Unit,
+    speech: KidioSpeech
 ) {
+    var mode by remember { mutableStateOf("learn") }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -721,21 +943,6 @@ fun CategoryDetailScreen(
                         )
                     }
                 },
-                actions = {
-                    Button(
-                        onClick = onQuizClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White.copy(alpha = 0.3f),
-                            contentColor = Color.White
-                        ),
-                        modifier = Modifier.padding(end = 8.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.QuestionMark, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Quiz", fontWeight = FontWeight.Bold)
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = category.color,
                     titleContentColor = Color.White,
@@ -744,22 +951,74 @@ fun CategoryDetailScreen(
             )
         }
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .background(category.color.copy(alpha = 0.05f))
+                .background(category.color.copy(alpha = 0.06f))
         ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(category.items) { item ->
-                    ItemCard(item, onClick = { onItemClick(item) })
+                LearnQuizModeCard(
+                    selected = mode == "learn",
+                    title = "Học",
+                    emoji = "📖",
+                    subtitle = "Xem & nghe",
+                    color = Color(0xFF43A047),
+                    modifier = Modifier.weight(1f),
+                    onClick = { mode = "learn" }
+                )
+                LearnQuizModeCard(
+                    selected = mode == "quiz",
+                    title = "Quiz",
+                    emoji = "🎯",
+                    subtitle = "Chơi đố",
+                    color = Color(0xFFFF6F00),
+                    modifier = Modifier.weight(1f),
+                    onClick = { mode = "quiz" }
+                )
+            }
+
+            when (mode) {
+                "learn" -> {
+                    Text(
+                        text = "Chạm vào hình để nghe tên nhé! 🔊",
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF5D4037)
+                    )
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
+                        items(category.items) { item ->
+                            ItemCard(
+                                item = item,
+                                onClick = { onItemClick(item) },
+                                onSpeakClick = {
+                                    val text = if (item.description.isNotBlank()) item.description else item.name
+                                    speech.say(text)
+                                }
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    QuizIntroPanel(
+                        category = category,
+                        onStartQuiz = onQuizClick,
+                        speech = speech
+                    )
                 }
             }
         }
@@ -767,7 +1026,104 @@ fun CategoryDetailScreen(
 }
 
 @Composable
-fun ItemCard(item: KidioItem, onClick: () -> Unit) {
+fun LearnQuizModeCard(
+    selected: Boolean,
+    title: String,
+    emoji: String,
+    subtitle: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.04f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "modeScale"
+    )
+    Card(
+        modifier = modifier
+            .height(100.dp)
+            .scale(scale)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) color else color.copy(alpha = 0.35f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (selected) 12.dp else 2.dp
+        ),
+        border = if (selected) BorderStroke(4.dp, Color.White) else null
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(emoji, fontSize = 32.sp)
+            Text(title, color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
+            Text(subtitle, color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+fun QuizIntroPanel(
+    category: Category,
+    onStartQuiz: () -> Unit,
+    speech: KidioSpeech
+) {
+    LaunchedEffect(Unit) {
+        speech.prompt("Bé chọn Quiz để chơi đố vui nhé!")
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("🎯", fontSize = 72.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Đố vui: ${category.name}",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Black,
+            color = category.color,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Tìm đúng hình theo tên!\nCó ${category.items.size} câu hỏi thú vị",
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(
+            onClick = {
+                speech.prompt("Bắt đầu Quiz!")
+                onStartQuiz()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = category.color)
+        ) {
+            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(36.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("Bắt đầu Quiz!", fontSize = 24.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+@Composable
+fun ItemCard(
+    item: KidioItem,
+    onClick: () -> Unit,
+    onSpeakClick: () -> Unit = onClick
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -804,10 +1160,7 @@ fun ItemCard(item: KidioItem, onClick: () -> Unit) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = item.emoji,
-                    fontSize = 72.sp
-                )
+                KidioItemVisual(item = item, visualFontSize = 64.sp)
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -817,13 +1170,49 @@ fun ItemCard(item: KidioItem, onClick: () -> Unit) {
                 color = Color(0xFF2D2D2D),
                 textAlign = TextAlign.Center
             )
+            if (item.description.isNotBlank()) {
+                Text(
+                    text = item.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            FilledIconButton(
+                onClick = onSpeakClick,
+                modifier = Modifier.size(48.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = "Nghe",
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun KidioItemVisual(item: KidioItem, visualFontSize: androidx.compose.ui.unit.TextUnit) {
+    if (item.isDigitVisual()) {
+        Text(
+            text = item.emoji,
+            fontSize = visualFontSize,
+            fontWeight = FontWeight.Black,
+            color = Color(0xFF2D2D2D)
+        )
+    } else {
+        Text(text = item.emoji, fontSize = visualFontSize)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuizScreen(category: Category, onBackClick: () -> Unit, speak: (String) -> Unit) {
+fun QuizScreen(category: Category, onBackClick: () -> Unit, speech: KidioSpeech) {
     var currentItem by remember { mutableStateOf(category.items.randomOrNull() ?: KidioItem("Empty", "")) }
     var options by remember { mutableStateOf(generateOptions(category, currentItem)) }
     var feedback by remember { mutableStateOf<String?>(null) }
@@ -833,7 +1222,7 @@ fun QuizScreen(category: Category, onBackClick: () -> Unit, speak: (String) -> U
 
     LaunchedEffect(currentItem) {
         if (currentItem.name != "Empty") {
-            speak("Bé hãy tìm hình ${currentItem.name} ở đâu nào?")
+            speech.prompt("Bé hãy tìm hình ${currentItem.name} ở đâu nào?")
         }
     }
 
@@ -890,7 +1279,7 @@ fun QuizScreen(category: Category, onBackClick: () -> Unit, speak: (String) -> U
                     color = category.color,
                     fontSize = 48.sp
                 )
-                IconButton(onClick = { speak(currentItem.name) }) {
+                IconButton(onClick = { speech.say(currentItem.speakLabel()) }) {
                     Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Listen", modifier = Modifier.size(40.dp))
                 }
             }
@@ -907,7 +1296,7 @@ fun QuizScreen(category: Category, onBackClick: () -> Unit, speak: (String) -> U
                             feedback = "Đúng rồi! Bé giỏi quá! 🌟"
                             feedbackColor = Color(0xFF4CAF50)
                             score++
-                            speak("Đúng rồi! Bé giỏi quá!")
+                            speech.prompt("Đúng rồi! Bé giỏi quá!")
 
                             val nextItem = category.items.randomOrNull() ?: currentItem
                             currentItem = nextItem
@@ -915,7 +1304,7 @@ fun QuizScreen(category: Category, onBackClick: () -> Unit, speak: (String) -> U
                         } else {
                             feedback = "Sai rồi, bé thử lại nhé! 💪"
                             feedbackColor = Color(0xFFF44336)
-                            speak("Sai rồi, bé thử lại nhé!")
+                            speech.prompt("Sai rồi, bé thử lại nhé!")
                         }
                         questionsAsked++
                     }
@@ -953,7 +1342,7 @@ fun QuizOptionCard(item: KidioItem, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = item.emoji, fontSize = 80.sp)
+            KidioItemVisual(item = item, visualFontSize = 80.sp)
         }
     }
 }
@@ -965,7 +1354,7 @@ fun generateOptions(category: Category, correctItem: KidioItem): List<KidioItem>
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MemoryGameScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
+fun MemoryGameScreen(onBackClick: () -> Unit, speech: KidioSpeech) {
     val category = categories[0]
     val gameItems = remember {
         (category.items.take(6) + category.items.take(6))
@@ -1013,7 +1402,7 @@ fun MemoryGameScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                         onClick = {
                             if (!isFlipped && flippedIndices.size < 2) {
                                 flippedIndices = flippedIndices + index
-                                speak(item.name)
+                                speech.say(item.speakLabel())
 
                                 if (flippedIndices.size == 2) {
                                     scope.launch {
@@ -1022,7 +1411,7 @@ fun MemoryGameScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                                         val second = flippedIndices.last()
                                         if (gameItems[first] == gameItems[second]) {
                                             matchedIndices = matchedIndices + first + second
-                                            speak("Match found!")
+                                            speech.prompt("Match found!")
                                         }
                                         flippedIndices = emptySet()
                                     }
@@ -1088,7 +1477,7 @@ fun MemoryCard(item: KidioItem, isFlipped: Boolean, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BalloonPopScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
+fun BalloonPopScreen(onBackClick: () -> Unit, speech: KidioSpeech) {
     var score by remember { mutableIntStateOf(0) }
     val balloons = remember { mutableStateListOf<Balloon>() }
     val configuration = LocalConfiguration.current
@@ -1150,7 +1539,7 @@ fun BalloonPopScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
                         .clip(CircleShape)
                         .background(balloon.color)
                         .clickable {
-                            speak("Pop!")
+                            speech.prompt("Pop!")
                             score++
                             balloons.remove(balloon)
                         },
@@ -1164,4 +1553,503 @@ fun BalloonPopScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
 }
 
 data class Balloon(val id: Int, val x: androidx.compose.ui.unit.Dp, val y: androidx.compose.ui.unit.Dp, val color: Color, val speed: Float)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LetterBuildScreen(onBackClick: () -> Unit, speech: KidioSpeech) {
+    var currentItem by remember { mutableStateOf(randomBuildableItem()) }
+    val target = currentItem.spellingWord()
+    var selectedSlots by remember(currentItem.name) { mutableStateOf(List<Char?>(target.length) { null }) }
+    var letterPool by remember(currentItem.name) { mutableStateOf(target.toList().shuffled()) }
+    var feedback by remember { mutableStateOf<String?>(null) }
+    var feedbackOk by remember { mutableStateOf(false) }
+    var completedCount by remember { mutableIntStateOf(0) }
+    var showHint by remember { mutableStateOf(false) }
+
+    fun resetSlots() {
+        val word = currentItem.spellingWord()
+        selectedSlots = List(word.length) { null }
+        letterPool = word.toList().shuffled()
+        feedback = null
+        feedbackOk = false
+        showHint = false
+    }
+
+    fun loadRandomWord() {
+        currentItem = randomBuildableItem(exclude = currentItem)
+        feedback = null
+        feedbackOk = false
+        showHint = false
+    }
+
+    LaunchedEffect(currentItem.name) {
+        speech.prompt("Bé hãy ghép các chữ để tạo từ: ${currentItem.displayHint()}")
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Ghép Chữ 🔤", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { 
+                        showHint = !showHint
+                        if (showHint) {
+                            speech.prompt("Gợi ý: ${currentItem.speakLabel()}")
+                        }
+                    }) {
+                        Icon(
+                            if (showHint) Icons.Default.LightbulbCircle else Icons.Default.Lightbulb,
+                            contentDescription = "Gợi ý",
+                            tint = if (showHint) Color(0xFFFFC107) else Color.White
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Từ ngẫu nhiên từ Let's Learn",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (currentItem.isDigitVisual()) {
+                Text(
+                    currentItem.emoji,
+                    fontSize = 96.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF009688)
+                )
+            } else {
+                Text(currentItem.emoji, fontSize = 80.sp)
+            }
+            
+            // Hiển thị chữ tiếng Anh chỉ khi bấm gợi ý
+            if (showHint) {
+                Text(
+                    currentItem.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF37474F)
+                )
+            } else {
+                Text(
+                    "?????",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.LightGray
+                )
+            }
+            
+            Text(
+                currentItem.displayHint(),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF009688),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                selectedSlots.forEachIndexed { index, letter ->
+                    val filled = letter != null
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(0.85f)
+                            .clickable(enabled = filled) {
+                                if (letter != null) {
+                                    letterPool = letterPool + letter
+                                    selectedSlots = selectedSlots.toMutableList().also {
+                                        it[index] = null
+                                    }
+                                    feedback = null
+                                }
+                            },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (filled) Color(0xFFB2DFDB) else Color(0xFFE0E0E0)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = if (filled) 6.dp else 2.dp)
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = letter?.toString() ?: "?",
+                                fontSize = if (target.length > 6) 20.sp else 28.sp,
+                                fontWeight = FontWeight.Black,
+                                color = if (filled) Color(0xFF00695C) else Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text("Chọn chữ:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val rows = letterPool.chunked(6)
+            rows.forEach { rowLetters ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    rowLetters.forEach { ch ->
+                        Button(
+                            onClick = {
+                                val emptyIndex = selectedSlots.indexOfFirst { it == null }
+                                if (emptyIndex >= 0) {
+                                    selectedSlots = selectedSlots.toMutableList().also {
+                                        it[emptyIndex] = ch
+                                    }
+                                    letterPool = letterPool.toMutableList().also { list ->
+                                        list.removeAt(list.indexOf(ch))
+                                    }
+                                    feedback = null
+                                }
+                            },
+                            modifier = Modifier.size(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF009688))
+                        ) {
+                            Text(ch.toString(), fontSize = 22.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            feedback?.let { msg ->
+                Text(
+                    msg,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (feedbackOk) Color(0xFF4CAF50) else Color(0xFFF44336),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { resetSlots(); speech.prompt("Làm lại nhé") },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(60.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(3.dp, Color(0xFF009688))
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Làm lại", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+                Button(
+                    onClick = {
+                        val built = selectedSlots.joinToString("") { it?.toString() ?: "" }
+                        if (built.length < target.length) {
+                            feedback = "Bé ghép đủ chữ đã nhé!"
+                            feedbackOk = false
+                            speech.prompt("Bé ghép đủ chữ đã nhé!")
+                        } else if (built.equals(target, ignoreCase = true)) {
+                            feedback = "Đúng rồi! Giỏi quá! 🌟"
+                            feedbackOk = true
+                            completedCount++
+                            speech.prompt("Đúng rồi! Từ là ${currentItem.name}")
+                        } else {
+                            feedback = "Chưa đúng, thử lại nhé! 💪"
+                            feedbackOk = false
+                            speech.prompt("Chưa đúng, thử lại nhé!")
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .height(60.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4CAF50)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Kiểm tra", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Đúng: $completedCount", fontWeight = FontWeight.Bold, color = Color(0xFF009688))
+                Button(
+                    onClick = {
+                        loadRandomWord()
+                        speech.prompt("Từ mới: ${currentItem.displayHint()}")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF009688))
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Từ mới")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ListenChooseScreen(onBackClick: () -> Unit, speech: KidioSpeech) {
+    var currentItem by remember { mutableStateOf(randomLearnItem()) }
+    var options by remember(currentItem.name) { mutableStateOf(listenChooseOptions(currentItem)) }
+    var feedback by remember { mutableStateOf<String?>(null) }
+    var feedbackOk by remember { mutableStateOf(false) }
+    var showRetry by remember { mutableStateOf(false) }
+    var answeredCorrectly by remember { mutableStateOf(false) }
+    var score by remember { mutableIntStateOf(0) }
+
+    fun speakQuestion() {
+        speech.say(currentItem.speakLabel())
+    }
+
+    fun loadNextQuestion() {
+        currentItem = randomLearnItem(exclude = currentItem)
+        options = listenChooseOptions(currentItem)
+        feedback = null
+        feedbackOk = false
+        showRetry = false
+        answeredCorrectly = false
+    }
+
+    LaunchedEffect(currentItem.name) {
+        delay(400)
+        speakQuestion()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Nghe & Chọn 👂", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF5C6BC0),
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Điểm: $score",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
+                color = Color(0xFF5C6BC0),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE8EAF6))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("👂", fontSize = 48.sp)
+                    Text(
+                        "Bé nghe và chọn đúng từ nhé!",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    FilledIconButton(
+                        onClick = { speakQuestion() },
+                        modifier = Modifier.size(72.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color(0xFF5C6BC0)
+                        )
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = "Nghe lại",
+                            modifier = Modifier.size(40.dp),
+                            tint = Color.White
+                        )
+                    }
+                    Text(
+                        "Bấm loa để nghe lại",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(options, key = { it.name }) { item ->
+                    ListenChooseOptionCard(
+                        item = item,
+                        enabled = !answeredCorrectly,
+                        isCorrectHighlight = answeredCorrectly && item.name == currentItem.name,
+                        onClick = {
+                            if (answeredCorrectly) return@ListenChooseOptionCard
+                            if (item.name == currentItem.name) {
+                                feedback = "Đúng rồi! Bé giỏi quá! 🌟"
+                                feedbackOk = true
+                                showRetry = false
+                                answeredCorrectly = true
+                                score++
+                                speech.prompt("Đúng rồi! Bé giỏi quá!")
+                            } else {
+                                feedback = "Chưa đúng rồi!"
+                                feedbackOk = false
+                                showRetry = true
+                                speech.prompt("Sai rồi, bé thử lại nhé!")
+                            }
+                        }
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                feedback?.let { msg ->
+                    Text(
+                        msg,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = if (feedbackOk) Color(0xFF4CAF50) else Color(0xFFF44336),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (showRetry && !answeredCorrectly) {
+                    Button(
+                        onClick = { speakQuestion() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Thử lại — nghe lại", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    }
+                }
+
+                if (answeredCorrectly) {
+                    Button(
+                        onClick = {
+                            loadNextQuestion()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    ) {
+                        Icon(Icons.Default.ArrowForward, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Từ tiếp theo", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ListenChooseOptionCard(
+    item: KidioItem,
+    enabled: Boolean,
+    isCorrectHighlight: Boolean,
+    onClick: () -> Unit
+) {
+    val bgColor = if (isCorrectHighlight) Color(0xFFC8E6C9) else Color.White
+    val borderColor = if (isCorrectHighlight) Color(0xFF4CAF50) else Color.Transparent
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clickable(enabled = enabled) { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        border = if (borderColor != Color.Transparent) BorderStroke(3.dp, borderColor) else null
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            KidioItemVisual(item = item, visualFontSize = 48.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                item.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+                color = Color(0xFF2D2D2D)
+            )
+        }
+    }
+}
 
