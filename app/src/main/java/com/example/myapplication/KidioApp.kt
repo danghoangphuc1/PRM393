@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.speech.tts.TextToSpeech
+<<<<<<< Updated upstream
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -9,52 +10,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+=======
+>>>>>>> Stashed changes
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.asAndroidPath
-import androidx.compose.ui.layout.onSizeChanged
-import android.graphics.Bitmap
-import android.graphics.Canvas as AndroidCanvas
-import android.graphics.Paint as AndroidPaint
-import android.graphics.Typeface
-import android.graphics.Matrix as AndroidMatrix
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.example.myapplication.models.*
+import com.example.myapplication.ui.screens.*
+import com.example.myapplication.ui.components.*
 import java.util.Locale
+<<<<<<< Updated upstream
 import kotlin.random.Random
 
 data class Category(
@@ -177,6 +149,8 @@ val categories = listOf(
         )
     )
 )
+=======
+>>>>>>> Stashed changes
 
 @Composable
 fun KidioApp() {
@@ -278,6 +252,7 @@ fun KidioApp() {
         }
     }
 }
+<<<<<<< Updated upstream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1165,3 +1140,5 @@ fun BalloonPopScreen(onBackClick: () -> Unit, speak: (String) -> Unit) {
 
 data class Balloon(val id: Int, val x: androidx.compose.ui.unit.Dp, val y: androidx.compose.ui.unit.Dp, val color: Color, val speed: Float)
 
+=======
+>>>>>>> Stashed changes
