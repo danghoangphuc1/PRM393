@@ -1,15 +1,19 @@
 class LearningItem {
   final String id;
   final String categoryId;
-  final String name;
+  final String word;
   final String imageUrl;
-  final String audioPath;
+  final String meaning;
+  final String emoji;
 
-  LearningItem({
+  const LearningItem({
     required this.id,
     required this.categoryId,
-    required this.name,
-    required this.imageUrl,
-    required this.audioPath,
+    required this.word,
+    this.imageUrl = '',
+    required this.meaning,
+    this.emoji = '📚',
   });
+
+  String get displayLabel => word;
 }

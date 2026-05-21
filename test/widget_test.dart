@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:kidio_app/main.dart';
 import 'package:kidio_app/viewmodels/home_viewmodel.dart';
 import 'package:kidio_app/viewmodels/learning_viewmodel.dart';
 import 'package:kidio_app/viewmodels/auth_viewmodel.dart';
@@ -10,9 +9,7 @@ import 'package:kidio_app/viewmodels/pronunciation_viewmodel.dart';
 import 'package:kidio_app/views/home_view.dart';
 
 void main() {
-  testWidgets('HomeView has main menu buttons test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    // Note: We wrap in MultiProvider because HomeView depends on AuthViewModel
+  testWidgets('HomeView shows main menu', (WidgetTester tester) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -28,20 +25,13 @@ void main() {
       ),
     );
 
-    // Đợi một chút để UI render xong
     await tester.pumpAndSettle();
 
-    // Kiểm tra xem logo KIDIO có tồn tại không
     expect(find.text('KIDIO'), findsOneWidget);
-
-    // Kiểm tra các nút chức năng chính
-    expect(find.text('LEARN'), findsOneWidget);
-    expect(find.text('PRACTICE'), findsOneWidget);
-    expect(find.text('STORIES'), findsOneWidget);
-    expect(find.text('SPEAK'), findsOneWidget);
-
-    // Kiểm tra sự tồn tại của icon menu
-    expect(find.byIcon(Icons.menu_book), findsOneWidget);
-    expect(find.byIcon(Icons.edit), findsOneWidget);
+    expect(find.text('Learn'), findsOneWidget);
+    expect(find.text('Games'), findsOneWidget);
+    expect(find.text('Practice'), findsOneWidget);
+    expect(find.text('Stories'), findsOneWidget);
+    expect(find.text('Speak'), findsOneWidget);
   });
 }

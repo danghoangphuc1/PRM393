@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'core/theme/kidio_theme.dart';
 import 'viewmodels/home_viewmodel.dart';
 import 'viewmodels/learning_viewmodel.dart';
 import 'viewmodels/auth_viewmodel.dart';
@@ -14,7 +14,7 @@ void main() async {
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    debugPrint("Firebase initialization failed: $e");
+    debugPrint('Firebase initialization failed: $e');
   }
 
   runApp(const KidioApp());
@@ -36,17 +36,7 @@ class KidioApp extends StatelessWidget {
       child: MaterialApp(
         title: 'KIDIO',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.orange,
-            primary: Colors.orange,
-            secondary: Colors.lightBlue,
-          ),
-          useMaterial3: true,
-          textTheme: GoogleFonts.comicNeueTextTheme(
-            Theme.of(context).textTheme,
-          ),
-        ),
+        theme: KidioTheme.build(),
         home: const HomeView(),
       ),
     );

@@ -28,7 +28,8 @@ dependencies:
   # AI & Media
   flutter_tts: ^4.2.2
   speech_to_text: ^7.0.0
-  youtube_player_flutter: ^9.1.1
+  youtube_player_flutter: ^9.1.3
+  flutter_inappwebview: ^6.1.4
 
 dev_dependencies:
   flutter_test:

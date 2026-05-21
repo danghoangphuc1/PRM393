@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/theme/kidio_theme.dart';
 import '../viewmodels/writing_viewmodel.dart';
 
 class WritingPracticeView extends StatelessWidget {
@@ -19,88 +20,171 @@ class WritingPracticeView extends StatelessWidget {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.refresh),
-                  onPressed: () => viewModel.clearCanvas(),
+                  onPressed: viewModel.clearCanvas,
                 ),
               ],
             ),
             body: Column(
               children: [
                 Expanded(
-                  child: Center(
-                    child: Stack(
-                      children: [
-                        // Chữ cái mờ làm mẫu bên dưới
-                        Center(
-                          child: Text(
-                            targetLetter,
-                            style: TextStyle(
-                              fontSize: 300,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.withOpacity(0.2),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final canvasSize = Size(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                      );
+                      viewModel.setCanvasSize(canvasSize);
+                      return Stack(
+                        children: [
+                          Center(
+                            child: Text(
+                              targetLetter,
+                              style: TextStyle(
+                                fontSize: 300,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.withValues(alpha: 0.2),
+                              ),
                             ),
                           ),
-                        ),
-                        // Canvas để bé vẽ lên
-                        GestureDetector(
-                          onPanUpdate: (details) {
-                            RenderBox renderBox = context.findRenderObject() as RenderBox;
-                            viewModel.addPoint(renderBox.globalToLocal(details.globalPosition));
-                          },
-                          onPanEnd: (details) {
-                            viewModel.addPoint(null); // Kết thúc một nét vẽ
-                            // Ở đây có thể gọi logic chấm điểm
-                          },
-                          child: CustomPaint(
-                            painter: WritingPainter(points: viewModel.points),
-                            size: Size.infinite,
+                          GestureDetector(
+                            onPanUpdate: (details) {
+                              final box = context.findRenderObject() as RenderBox;
+                              viewModel.addPoint(
+                                box.globalToLocal(details.globalPosition),
+                              );
+                            },
+                            onPanEnd: (_) => viewModel.addPoint(null),
+                            child: CustomPaint(
+                              painter: WritingPainter(points: viewModel.points),
+                              size: canvasSize,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                          Positioned(
+                            left: 12,
+                            bottom: 12,
+                            child: _ScoreChip(score: viewModel.score),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text(
-                        'Score: ${viewModel.score.toStringAsFixed(1)}',
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          // Giả lập danh sách điểm mục tiêu để test thuật toán
-                          viewModel.calculateScore([const Offset(200, 300), const Offset(200, 500)]);
-
-                          // Lưu điểm lên Firestore
-                          await viewModel.saveScoreToCloud(targetLetter);
-
-                          if (context.mounted) {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Great Job!'),
-                                content: Text('Your score is ${viewModel.score.toStringAsFixed(1)}/10. Progress saved!'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text('Finish'),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, -4),
                       ),
                     ],
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, _) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              viewModel.score > 0
+                                  ? 'Score: ${viewModel.score.toStringAsFixed(1)} / 10'
+                                  : 'Trace the letter!',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              viewModel.calculateScore(
+                                letter: targetLetter,
+                                canvasSize: viewModel.canvasSize,
+                              );
+                              await viewModel.saveScoreToCloud(targetLetter);
+
+                              if (!context.mounted) return;
+                              final stars = viewModel.score >= 8
+                                  ? '🌟🌟🌟'
+                                  : viewModel.score >= 5
+                                      ? '🌟🌟'
+                                      : viewModel.score >= 3
+                                          ? '🌟'
+                                          : '💪';
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  title: Text(
+                                    viewModel.score >= 5
+                                        ? 'Great Job! $stars'
+                                        : 'Keep Trying! $stars',
+                                  ),
+                                  content: Text(
+                                    'Your score is ${viewModel.score.toStringAsFixed(1)} / 10.\n'
+                                    'Trace slowly on the gray letter.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: KidioTheme.grassGreen,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(120, 52),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(26),
+                              ),
+                            ),
+                            child: const Text('Finish'),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _ScoreChip extends StatelessWidget {
+  final double score;
+
+  const _ScoreChip({required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    if (score <= 0) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: KidioTheme.grassGreen,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '${score.toStringAsFixed(1)} / 10',
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
       ),
     );
   }
@@ -113,12 +197,12 @@ class WritingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()
+    final paint = Paint()
       ..color = Colors.blue
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = 10.0;
+      ..strokeWidth = 12.0;
 
-    for (int i = 0; i < points.length - 1; i++) {
+    for (var i = 0; i < points.length - 1; i++) {
       if (points[i] != null && points[i + 1] != null) {
         canvas.drawLine(points[i]!, points[i + 1]!, paint);
       }
@@ -126,5 +210,6 @@ class WritingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant WritingPainter oldDelegate) =>
+      oldDelegate.points != points;
 }

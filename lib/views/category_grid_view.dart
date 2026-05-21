@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/learning_viewmodel.dart';
+import '../core/theme/kidio_theme.dart';
 import '../models/category.dart';
+import '../viewmodels/learning_viewmodel.dart';
 import 'learning_detail_view.dart';
 
 class CategoryGridView extends StatelessWidget {
@@ -13,25 +14,27 @@ class CategoryGridView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('KIDIO Learning'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text(
+          'Choose a Topic',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 1,
+      body: Container(
+        decoration: KidioTheme.rainbowGradient(),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
+              childAspectRatio: 0.95,
+            ),
+            itemCount: viewModel.categories.length,
+            itemBuilder: (context, index) {
+              return CategoryCard(category: viewModel.categories[index]);
+            },
           ),
-          itemCount: viewModel.categories.length,
-          itemBuilder: (context, index) {
-            final category = viewModel.categories[index];
-            return CategoryCard(category: category);
-          },
         ),
       ),
     );
@@ -47,34 +50,40 @@ class CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = Provider.of<LearningViewModel>(context, listen: false);
 
-    return InkWell(
-      onTap: () {
-        viewModel.selectCategory(category);
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const LearningDetailView()),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: category.color.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: category.color, width: 3),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(category.icon, size: 60, color: category.color),
-            const SizedBox(height: 12),
-            Text(
-              category.title,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: category.color.withOpacity(0.9),
+    return Material(
+      color: Colors.white,
+      elevation: 8,
+      borderRadius: BorderRadius.circular(28),
+      child: InkWell(
+        onTap: () {
+          viewModel.selectCategory(category);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LearningDetailView()),
+          );
+        },
+        borderRadius: BorderRadius.circular(28),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: category.color, width: 4),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(category.icon, size: 52, color: category.color),
+              const SizedBox(height: 10),
+              Text(
+                category.title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: category.color,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
